@@ -3,13 +3,13 @@ import React from "react";
 import { PDFViewer } from "@react-pdf/renderer";
 import MyDocument from "./pdfDocumentComponent";
 
-const PDFViewerComponent = () => (
+const PDFViewerComponent = (datas: any) => (
   
 
 
 
   <PDFViewer className="w-full h-full">
-    <MyDocument />
+    <MyDocument datas={datas}/>
   </PDFViewer>
 );
 
