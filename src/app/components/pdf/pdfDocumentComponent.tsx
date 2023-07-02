@@ -1,9 +1,18 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
 import styles from "./styles";
-import { TableCell, TableCellSmall } from "./components/tableCells";
+import { TableCell } from "./components/tableCells";
 import TableBankLoan from "./components/tableBankLoan.jsx/tableBankLoan";
 import { TablesCreditCard } from "./components/tablesCreditCard/tablesCreditCard";
+import {
+  formatarValorParaReal,
+  calculateExtrapoledMargin,
+  calculateExtrapoledMarginCard,
+  calculatePercentage35,
+  calculatePercentage5,
+  calculateUsedMargin,
+  calculateUsedMarginCard,
+} from "./logic";
 
 const Table: React.FC<TableProps> = ({ children }) => (
   <View style={[styles.table, { width: "63%%", alignSelf: "flex-end" }]}>
@@ -183,571 +192,522 @@ const datasTeste = {
   ],
 };
 
-const formatarValorParaReal = (valor: any) => {
-  const numeroFormatado = parseFloat(valor).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-  });
-  return numeroFormatado;
-};
+const MyDocument = ({ datas }: { datas: any }) => {
+  console.log(datas);
+  return (
+    <Document pageMode="fullScreen">
+      <Page size="A3" style={styles.page}>
+        <View style={styles.title}>
+          <Text>Histórico de</Text>
+          <Text>Empréstimo Consignado</Text>
+        </View>
+        <View style={styles.title}>
+          <Text>_____________________________________</Text>
+        </View>
 
-const calculatePercentage35 = (valor: any) => {
-  const porcentagem = 35;
-  return (porcentagem / 100) * valor;
-};
+        <View>
+          <Text>{datas.listaDadosPessoais.nome}</Text>
+        </View>
 
-const calculatePercentage5 = (valor: any) => {
-  const porcentagem = 5;
-  return (porcentagem / 100) * valor;
-};
+        {/* Painel Benefícios */}
+        <View style={styles.titleTablePanel}>
+          <Text>Beneficio </Text>
+        </View>
+        <View style={styles.panelBeneficio}>
+          <View style={{ width: 300, marginRight: 80, padding: "2" }}>
+            <Text style={{ color: "blue", flexWrap: "nowrap" }}>
+              {datas.listaDadosBeneficio.especie}
+            </Text>
+          </View>
 
-const calculateUsedMargin = (base: any, available: any) => {
-  const consignable = calculatePercentage35(base);
-  const usedMargin = consignable - available;
-  return usedMargin;
-};
+          <View style={styles.columnsPanel}>
+            <View style={{ width: 300, marginRight: 80, padding: "2" }}>
+              <Text>
+                Nº Benefício: <Text>{datas.listaDadosBeneficio.beneficio}</Text>
+              </Text>
+              <Text>
+                Situação: <Text>{datas.listaDadosBeneficio.situacao}</Text>
+              </Text>
+              <Text>
+                Pago em: <Text>{datas.listaDadosBancario.codigoBanco}</Text> -{" "}
+                <Text>{datas.listaDadosBancario.nomeBanco}</Text>
+              </Text>
+              <Text>
+                Meio: <Text>{datas.listaDadosBancario.tipoMeioPagamento}</Text>{" "}
+              </Text>
+              <Text>
+                Agência: <Text>{datas.listaDadosBancario.agencia}</Text>{" "}
+              </Text>
+              <Text>
+                Conta Corrente: <Text>{datas.listaDadosBancario.cc}</Text>
+              </Text>
+            </View>
 
-const calculateUsedMarginCard = (base: any, available: any) => {
-  const consignable = calculatePercentage5(base);
-  const usedMargin = consignable - available;
-  return usedMargin;
-};
+            <View style={{ width: "50%" }}>
+              {datas.listaDadosBeneficio.representanteLegal === "NÃO" ? (
+                <Text>Não possui representante legal</Text>
+              ) : (
+                <Text>Possui representante legal</Text>
+              )}
 
-const calculateExtrapoledMargin = (base: any, available: any) => {
-  const consignable = calculatePercentage35(base);
-  const usedMargin = calculateUsedMargin(base, available);
-  if (usedMargin < consignable) return formatarValorParaReal(0);
+              {datas.listaDadosBeneficio.pensao === "NÃO" ? (
+                <Text>Não é pensão alimentícia</Text>
+              ) : (
+                <Text>É pensão alimentícia</Text>
+              )}
 
-  const extrapoleMargin = usedMargin - consignable;
+              {datas.listaDadosBeneficio.bloqueioEmprestimo === "NÃO" ? (
+                <Text>Liberado para empréstimo </Text>
+              ) : (
+                <Text>Não liberado para empréstimo </Text>
+              )}
 
-  return formatarValorParaReal(extrapoleMargin);
-};
+              {datas.listaDadosBeneficio.elegivel === "SIM" ? (
+                <Text>Elegível para empréstimos</Text>
+              ) : (
+                <Text>Não elegível para empréstimos</Text>
+              )}
+            </View>
+          </View>
+        </View>
 
-const calculateExtrapoledMarginCard = (base: any, available: any) => {
-  debugger;
-  const consignable = calculatePercentage5(base);
-  const usedMargin = calculateUsedMargin(consignable, available);
-  if (usedMargin < consignable) return "---";
+        {/* Painel Resumo Financeiro */}
+        <View style={styles.titleTablePanel}>
+          <Text>Beneficio</Text>
+        </View>
 
-  const extrapoleMargin = usedMargin - consignable;
+        <View style={[styles.panelEmprestimo]}>
+          <View style={{ flexDirection: "row" }}>
+            <Table>
+              <View style={styles.tableHeader}>
+                <TableCell>BASE DE CÁLCULO </TableCell>
+              </View>
+              <View style={styles.tableHeader}>
+                <TableCell>MARGEM CONSIGNÁVEL* </TableCell>
+              </View>
+              <View style={styles.tableHeader}>
+                <TableCell>MARGEM UTILIZADA </TableCell>
+              </View>
+              <View style={styles.tableHeader}>
+                <TableCell>MARGEM RESERVADA** </TableCell>
+              </View>
+              <View style={styles.tableHeader}>
+                <TableCell>MARGEM DISPONÍVEL </TableCell>
+              </View>
+              <View style={styles.tableHeader}>
+                <TableCell>MARGEM EXTRAPOLADA** </TableCell>
+              </View>
+            </Table>
 
-  return formatarValorParaReal(extrapoleMargin);
-};
+            <Table>
+              <View style={styles.tableHeader}>
+                <View
+                  style={{ width: 110, alignItems: "center", borderRight: 1 }}
+                >
+                  <TableCell>EMPRÉSTIMOS </TableCell>
+                </View>
+                <View
+                  style={{ width: 110, alignContent: "center", borderRight: 1 }}
+                >
+                  <TableCell>RMC</TableCell>
+                </View>
+                <View
+                  style={{ width: 110, alignContent: "center", borderRight: 1 }}
+                >
+                  <TableCell>RCC</TableCell>
+                </View>
+              </View>
+              {/**DataCells */}
+              {/**EDITADA */}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.basedeCalculo
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
 
-const MyDocument = (datas: any) => (
-  <Document pageMode="fullScreen">
-    <Page size="A3" style={styles.page}>
-      <Text style={styles.tableTitle}> CARTÃO DE CRÉDITO</Text>
-      <TablesCreditCard datas={datasTeste.listaRMC} />
-      <Text style={[styles.SmallFont, { marginBottom: 40 }]}>
-        *Contratos que comprometem a margem consignável
-      </Text>
-      <TablesCreditCard datas={datasTeste.listaRMC} />
-      <Text style={styles.SmallFont}>
-        *Contratos que comprometem a margem consignável
-      </Text>
-    </Page>
-    <Page size="A3" style={styles.page}>
-      <TableBankLoan datas={datasTeste.listaEmprestimos} />
-      <Text style={styles.SmallFont}>
-        *Contratos que comprometem a margem consignável
-      </Text>
-    </Page>
-    <Page size="A3" style={styles.page}>
-      <View style={styles.title}>
-        <Text>Histórico de</Text>
-        <Text>Empréstimo Consignado</Text>
-      </View>
-      <View style={styles.title}>
-        <Text>_____________________________________</Text>
-      </View>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.basedeCalculo
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
 
-      <View>
-        <Text>{datasTeste.listaDadosPessoais.nome}</Text>
-      </View>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.basedeCalculo
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+              </View>
 
-      {/* Painel Benefícios */}
-      <View style={styles.titleTablePanel}>
-        <Text>Beneficio </Text>
-      </View>
-      <View style={styles.panelBeneficio}>
-        <View style={{ width: 300, marginRight: 80, padding: "2" }}>
-          <Text style={{ color: "blue", flexWrap: "nowrap" }}>
-            {datasTeste.listaDadosBeneficio.especie}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculatePercentage35(
+                          datas.listaDadosBeneficio.basedeCalculo
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculatePercentage5(
+                          datas.listaDadosBeneficio.basedeCalculo
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculatePercentage5(
+                          datas.listaDadosBeneficio.basedeCalculo
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> --- </TableCell>
+                  )}
+                </View>
+              </View>
+              {/**Margem Utilizada */}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculateUsedMargin(
+                          datas.listaDadosBeneficio.basedeCalculo,
+                          datas.listaDadosBeneficio.valorMargemDisponivel
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculateUsedMarginCard(
+                          datas.listaDadosBeneficio.basedeCalculo,
+                          datas.listaDadosBeneficio.valorMargemDisponivelRMC
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.basedeCalculo ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        calculateUsedMarginCard(
+                          datas.listaDadosBeneficio.basedeCalculo,
+                          datas.listaDadosBeneficio.valorMargemDisponivelRCC
+                        )
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+              </View>
+              {/**Margem Reservada */}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  <TableCell> {formatarValorParaReal(0)}</TableCell>
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  <TableCell> ---</TableCell>
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  <TableCell> ---</TableCell>
+                </View>
+              </View>
+              {/**Margem Disponivel */}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.valorMargemDisponivel ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.valorMargemDisponivel
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.valorMargemDisponivelRMC ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.valorMargemDisponivelRMC
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> --- </TableCell>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  {!!datas.listaDadosBeneficio.valorMargemDisponivelRCC ? (
+                    <TableCell>
+                      {" "}
+                      {formatarValorParaReal(
+                        datas.listaDadosBeneficio.valorMargemDisponivelRCC
+                      )}
+                    </TableCell>
+                  ) : (
+                    <TableCell> ---</TableCell>
+                  )}
+                </View>
+              </View>
+              {/**Margem Extrapolada */}
+              <View style={styles.tableRow}>
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  <TableCell>
+                    {" "}
+                    {calculateExtrapoledMargin(
+                      datas.listaDadosBeneficio.basedeCalculo,
+                      datas.listaDadosBeneficio.valorMargemDisponivel
+                    )}
+                  </TableCell>
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  Teste
+                  <TableCell>
+                    {calculateExtrapoledMarginCard(
+                      datas.listaDadosBeneficio.basedeCalculo,
+                      datas.listaDadosBeneficio.valorMargemDisponivelRMC
+                    )}
+                  </TableCell>
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    paddingRight: 4,
+                    alignContent: "center",
+                    borderRight: 1,
+                  }}
+                >
+                  <TableCell>
+                    {calculateExtrapoledMarginCard(
+                      datas.listaDadosBeneficio.basedeCalculo,
+                      datas.listaDadosBeneficio.valorMargemDisponivelRCC
+                    )}
+                  </TableCell>
+                </View>
+              </View>
+            </Table>
+          </View>
+
+          <Text style={styles.SmallFont}>
+            A margem consignável atual representa 45% da base de cálculo para
+            empréstimos. Dessa margem, 35% é para empréstimos e 10% para cartão,
+            sendo 5% para RMC e 5% para RCC.
+          </Text>
+          <Text style={styles.SmallFont}>
+            ** O valor da margem reservada está incluído no valor da margem
+            utilizada.
+          </Text>
+          <Text style={styles.SmallFont}>
+            *** A margem extrapolada representa o valor que excedeu a margem
+            disponível, que pode ocorrer em situações específicas como a redução
+            da renda do benefício
           </Text>
         </View>
+      </Page>
 
-        <View style={styles.columnsPanel}>
-          <View style={{ width: 300, marginRight: 80, padding: "2" }}>
-            <Text>
-              Nº Benefício:{" "}
-              <Text>{datasTeste.listaDadosBeneficio.beneficio}</Text>
-            </Text>
-            <Text>
-              Situação: <Text>{datasTeste.listaDadosBeneficio.situacao}</Text>
-            </Text>
-            <Text>
-              Pago em: <Text>{datasTeste.listaDadosBancario.codigoBanco}</Text>{" "}
-              - <Text>{datasTeste.listaDadosBancario.nomeBanco}</Text>
-            </Text>
-            <Text>
-              Meio:{" "}
-              <Text>{datasTeste.listaDadosBancario.tipoMeioPagamento}</Text>{" "}
-            </Text>
-            <Text>
-              Agência: <Text>{datasTeste.listaDadosBancario.agencia}</Text>{" "}
-            </Text>
-            <Text>
-              Conta Corrente: <Text>{datasTeste.listaDadosBancario.cc}</Text>
-            </Text>
-          </View>
-
-          <View style={{ width: "50%" }}>
-            {datasTeste.listaDadosBeneficio.representanteLegal === "NÃO" ? (
-              <Text>Não possui representante legal</Text>
-            ) : (
-              <Text>Possui representante legal</Text>
-            )}
-
-            {datasTeste.listaDadosBeneficio.pensao === "NÃO" ? (
-              <Text>Não é pensão alimentícia</Text>
-            ) : (
-              <Text>É pensão alimentícia</Text>
-            )}
-
-            {datasTeste.listaDadosBeneficio.bloqueioEmprestimo === "NÃO" ? (
-              <Text>Liberado para empréstimo </Text>
-            ) : (
-              <Text>Não liberado para empréstimo </Text>
-            )}
-
-            {datasTeste.listaDadosBeneficio.elegivel === "SIM" ? (
-              <Text>Elegível para empréstimos</Text>
-            ) : (
-              <Text>Não elegível para empréstimos</Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Painel Resumo Financeiro */}
-      <View style={styles.titleTablePanel}>
-        <Text>Beneficio</Text>
-      </View>
-
-      <View style={[styles.panelEmprestimo]}>
-        <View style={{ flexDirection: "row" }}>
-          <Table>
-            <View style={styles.tableHeader}>
-              <TableCell>BASE DE CÁLCULO </TableCell>
-            </View>
-            <View style={styles.tableHeader}>
-              <TableCell>MARGEM CONSIGNÁVEL* </TableCell>
-            </View>
-            <View style={styles.tableHeader}>
-              <TableCell>MARGEM UTILIZADA </TableCell>
-            </View>
-            <View style={styles.tableHeader}>
-              <TableCell>MARGEM RESERVADA** </TableCell>
-            </View>
-            <View style={styles.tableHeader}>
-              <TableCell>MARGEM DISPONÍVEL </TableCell>
-            </View>
-            <View style={styles.tableHeader}>
-              <TableCell>MARGEM EXTRAPOLADA** </TableCell>
-            </View>
-          </Table>
-
-          <Table>
-            <View style={styles.tableHeader}>
-              <View
-                style={{ width: 110, alignItems: "center", borderRight: 1 }}
-              >
-                <TableCell>EMPRÉSTIMOS </TableCell>
-              </View>
-              <View
-                style={{ width: 110, alignContent: "center", borderRight: 1 }}
-              >
-                <TableCell>RMC</TableCell>
-              </View>
-              <View
-                style={{ width: 110, alignContent: "center", borderRight: 1 }}
-              >
-                <TableCell>RCC</TableCell>
-              </View>
-            </View>
-            {/**DataCells */}
-            {/**EDITADA */}
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.basedeCalculo
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.basedeCalculo
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.basedeCalculo
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculatePercentage35(
-                        datasTeste.listaDadosBeneficio.basedeCalculo
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculatePercentage5(
-                        datasTeste.listaDadosBeneficio.basedeCalculo
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculatePercentage5(
-                        datasTeste.listaDadosBeneficio.basedeCalculo
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> --- </TableCell>
-                )}
-              </View>
-            </View>
-            {/**Margem Utilizada */}
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculateUsedMargin(
-                        datasTeste.listaDadosBeneficio.basedeCalculo,
-                        datasTeste.listaDadosBeneficio.valorMargemDisponivel
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculateUsedMarginCard(
-                        datasTeste.listaDadosBeneficio.basedeCalculo,
-                        datasTeste.listaDadosBeneficio.valorMargemDisponivelRMC
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.basedeCalculo ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      calculateUsedMarginCard(
-                        datasTeste.listaDadosBeneficio.basedeCalculo,
-                        datasTeste.listaDadosBeneficio.valorMargemDisponivelRCC
-                      )
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-            </View>
-            {/**Margem Reservada */}
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                <TableCell> {formatarValorParaReal(0)}</TableCell>
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                <TableCell> ---</TableCell>
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                <TableCell> ---</TableCell>
-              </View>
-            </View>
-            {/**Margem Disponivel */}
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.valorMargemDisponivel ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.valorMargemDisponivel
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.valorMargemDisponivelRMC ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.valorMargemDisponivelRMC
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> --- </TableCell>
-                )}
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                {!!datasTeste.listaDadosBeneficio.valorMargemDisponivelRCC ? (
-                  <TableCell>
-                    {" "}
-                    {formatarValorParaReal(
-                      datasTeste.listaDadosBeneficio.valorMargemDisponivelRCC
-                    )}
-                  </TableCell>
-                ) : (
-                  <TableCell> ---</TableCell>
-                )}
-              </View>
-            </View>
-            {/**Margem Extrapolada */}
-            <View style={styles.tableRow}>
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                <TableCell>
-                  {" "}
-                  {calculateExtrapoledMargin(
-                    datasTeste.listaDadosBeneficio.basedeCalculo,
-                    datasTeste.listaDadosBeneficio.valorMargemDisponivel
-                  )}
-                </TableCell>
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                Teste
-                <TableCell>
-                  {calculateExtrapoledMarginCard(
-                    datasTeste.listaDadosBeneficio.basedeCalculo,
-                    datasTeste.listaDadosBeneficio.valorMargemDisponivelRMC
-                  )}
-                </TableCell>
-              </View>
-
-              <View
-                style={{
-                  width: 110,
-                  paddingRight: 4,
-                  alignContent: "center",
-                  borderRight: 1,
-                }}
-              >
-                <TableCell>
-                  {calculateExtrapoledMarginCard(
-                    datasTeste.listaDadosBeneficio.basedeCalculo,
-                    datasTeste.listaDadosBeneficio.valorMargemDisponivelRCC
-                  )}
-                </TableCell>
-              </View>
-            </View>
-          </Table>
-        </View>
-
-        <Text style={styles.SmallFont}>
-          A margem consignável atual representa 45% da base de cálculo para
-          empréstimos. Dessa margem, 35% é para empréstimos e 10% para cartão,
-          sendo 5% para RMC e 5% para RCC.
+      <Page size="A3" style={styles.page}>
+        <Text style={styles.tableTitle}> CARTÃO DE CRÉDITO</Text>
+        <TablesCreditCard datas={datas.listaRMC} />
+        <Text style={[styles.SmallFont, { marginBottom: 40 }]}>
+          *Contratos que comprometem a margem consignável
         </Text>
+        <TablesCreditCard datas={datas.listaRMC} />
         <Text style={styles.SmallFont}>
-          ** O valor da margem reservada está incluído no valor da margem
-          utilizada.
+          *Contratos que comprometem a margem consignável
         </Text>
+      </Page>
+
+      <Page size="A3" style={styles.page}>
+        <TableBankLoan datas={datas.listaEmprestimos} />
         <Text style={styles.SmallFont}>
-          *** A margem extrapolada representa o valor que excedeu a margem
-          disponível, que pode ocorrer em situações específicas como a redução
-          da renda do benefício
+          *Contratos que comprometem a margem consignável
         </Text>
-      </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};
 
 export default MyDocument;

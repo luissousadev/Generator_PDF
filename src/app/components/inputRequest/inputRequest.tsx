@@ -1,7 +1,13 @@
-export default function InputRequestComponent() {
+export default function InputRequestComponent({
+  url,
+  onChange,
+}: {
+  url: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <>
-      <input></input>
+      <input placeholder="Insira sua URL" onChange={(e) => onChange(e.target.value)} value={url}></input>
     </>
   );
 }
