@@ -1,7 +1,12 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import data from "./data.json"
+import data from "./data.json";
+import axios from "axios";
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { data } = await axios.get(req.query.url as string);
   res.status(200).json(data);
 }
 

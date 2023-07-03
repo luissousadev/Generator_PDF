@@ -13,7 +13,7 @@ export default function Home() {
   const handleRequest = async (url: string): Promise<any> => {
     try {
       // http://localhost:3000/api/hello
-      const res = await axios.get(url);
+      const res = await axios.get(`/api/hello?url=${url}`);
       setDatas(res.data);
       console.log(res.data);
       console.log(datas);
